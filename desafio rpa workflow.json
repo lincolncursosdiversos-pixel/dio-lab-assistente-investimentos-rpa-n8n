@@ -1,0 +1,474 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "Clientes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -576,
+        0
+      ],
+      "id": "84e4d3da-3feb-4395-a892-69cfb1bd3181",
+      "name": "Webhook",
+      "webhookId": "0bf18fa4-ee3a-4739-bd80-1faa6b6a2dda"
+    },
+    {
+      "parameters": {
+        "url": "https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/data.csv",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -256,
+        48
+      ],
+      "id": "eccc6f6f-2ea1-4b44-b81f-014cad166fa7",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        3120,
+        -176
+      ],
+      "id": "31e1c43b-40c9-483f-bc12-85eb41b958f2",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\n// Pega o CSV como texto vindo do HTTP Request\nconst csvRaw = $json.data ?? $json.body ?? $json;\nconst text = (typeof csvRaw === \"string\") ? csvRaw : JSON.stringify(csvRaw);\n\nconst lines = text.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);\nconst headers = lines[0].split(\",\").map(h => h.trim());\n\nconst investimentos = lines.slice(1).map(line => {\n    const cols = line.split(\",\").map(c => c.trim());\n    const obj = {};\n    \n    headers.forEach((h, i) => obj[h] = cols[i] ?? \"\");\n    \n    // normaliza mínimo para número\n    obj.minimo = Number(String(obj.minimo).replace(/[^\\d]/g, \"\")) || 0;\n    \n    return obj;\n});\n\nreturn [{ json: { investimentos } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        16
+      ],
+      "id": "4dcba5e5-baf6-4dcb-ba0c-6bc817aab2fa",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        112,
+        -192
+      ],
+      "id": "37c90e19-24bd-48e1-bade-309024ffcfbc",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Gere o email com mensagem em HTML para o seguinte cliente:\n\n### Dados do Cliente:\nNome: {{ $json.cliente.nome }}\nPerfil: {{ $json.cliente.perfil }}\nSaldo Disponível: {{ $json.cliente.saldo }}\n\n### Recomendação de Investimento:\nProduto Recomendado: {{ $json.investimento_recomendado.produto }}\nAplicação Mínima: R$ {{ $json.investimento_recomendado.minimo }}\nRentabilidade Esperada: {{ $json.investimento_recomendado.rentabilidade }}\n\n\n\n",
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "Você é um copywriter especialista em investimentos e mercado financeiro. Sua tarefa é gerar o corpo de um e-mail personalizado em formato HTML com base nos dados do cliente e no investimento recomendado fornecidos.  ### Diretrizes de Copywriting: 1. Adapte o tom de voz ao perfil do cliente:    - Conservador: Foco em segurança, previsibilidade e proteção de patrimônio.    - Moderado: Equilíbrio entre segurança e busca por rentabilidade controlada.    - Arrojado: Foco em performance, crescimento de patrimônio a longo prazo e aceitação de oscilações. 2. Seja profissional, persuasivo e evite termos técnicos exagerados que possam afastar o cliente. 3. Use gatilhos mentais sutis de exclusividade e oportunidade personalizada.  ### Diretrizes de HTML/Design: 1. Crie um layout limpo, moderno e responsivo para e-mails (use inline CSS, tabelas se necessário para compatibilidade, e fontes padrão como Arial ou Helvetica). 2. Adicione uma seção de destaque contendo os detalhes do \"Investimento Recomendado\" (Produto, Aplicação Mínima, Rentabilidade). 3. Inclua um botão de chamada para ação (CTA) claro no final do email (ex: \"Falar com meu Assessor\" ou \"Conhecer Produto\"). 4. O design deve usar tons sóbrios e profissionais (como azul escuro, cinza e detalhes em dourado/verde para botões).  ### Regra Crucial de Saída: Retorne APENAS o código HTML puro, estruturado e pronto para envio. Não inclua nenhuma introdução, nenhuma explicação e não use blocos de código markdown (como ```html ... ```). Comece diretamente com <html> ou <div> e termine com o fechamento correspondente."
+            },
+            {
+              "type": "HumanMessagePromptTemplate",
+              "message": "{   \"subject\": \"Escreva o assunto do e-mail aqui\",   \"html_body\": \"Escreva todo o código HTML estruturado e inline do e-mail aqui dentro como uma string única de texto, sem quebras de linha reais que quebrem o JSON.\" }"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1856,
+        -400
+      ],
+      "id": "6f0d0406-0ad9-4601-9ea1-d26065024941",
+      "name": "Basic LLM Chain",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "model": "openrouter/free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1856,
+        -560
+      ],
+      "id": "7948193e-e008-48a0-9777-dabc59a66d05",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "4QIOPpp2OtFCBJHs",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ff7921f7-8fe3-4677-a6dd-4c74b3887c19",
+              "leftValue": "={{ $json.limited_item }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        -288
+      ],
+      "id": "d6f3cf75-5aa5-415c-b7cf-a4023339d349",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "364c305f-c6ba-4473-a486-22e3a0858e7d",
+              "name": "limited_item",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "060104c3-8d68-43f2-87e8-55da60e8e412",
+              "name": "items",
+              "value": "={{ $json.items }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        720,
+        -224
+      ],
+      "id": "83a1420e-502e-48ed-b45d-5bd139d66670",
+      "name": "limitar itens parametro"
+    },
+    {
+      "parameters": {
+        "fromEmail": "exemplo@gmail.com",
+        "toEmail": "={{ $json.cliente.email }}",
+        "subject": "=recomendação de investimento para {{ $json.cliente.nome}} ",
+        "html": "={{ $json.text }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2704,
+        -160
+      ],
+      "id": "25f203aa-ad51-42c6-959b-aa0f05ab27ea",
+      "name": "Send an Email",
+      "webhookId": "f4fffe50-5e75-49f8-b7ae-75a42b0e4ffe",
+      "credentials": {
+        "smtp": {
+          "id": "csKFxrmQ2n3enCXv",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let result = []\n\nfor (let c of $input.first().json.body.clientes ) {\n\n  let novo_cliente = {} \n  let saldoLimpo = String(c.saldo || \"0\").replace(/[^\\d]/g, \"\");\n  let saldo = Number(saldoLimpo) / 100 || 0; \n\n  novo_cliente['headers'] = $input.first().json.headers\n  novo_cliente['cliente'] = c \n\n  let investimentos_possiveis = []\n\n  let possiveis_investimentos = $input.first().json.investimentos.filter( el => {\n    let minimo = Number(el.minimo)\n    \n    return saldo > minimo\n  })\n\n  possiveis_investimentos.sort((a, b) => Number(b.minimo) - Number(a.minimo));\n\n  novo_cliente['investimento_recomendado'] = possiveis_investimentos[0]\n\n  result.push(novo_cliente)\n\n}\n\nreturn { items : result };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -160
+      ],
+      "id": "eda47a9a-dae4-4b97-9d69-d3ca59bfc8d0",
+      "name": "associação cliente x investimento"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1472,
+        -144
+      ],
+      "id": "0c059444-f6d9-482b-9cd6-4a02e1c52c58",
+      "name": "todos os itens da lista"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2368,
+        -288
+      ],
+      "id": "6046601a-4006-48e0-9741-d888cd76b3a9",
+      "name": "merge teste unitario"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.first().json.items[0]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        -304
+      ],
+      "id": "ba57422d-c2e5-46c7-91fc-4f32fa72de8a",
+      "name": "apenas um para teste unitario"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2368,
+        -96
+      ],
+      "id": "e97e6007-7491-4d03-bda7-64570376044a",
+      "name": "merge todos os itens"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "associação cliente x investimento",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "apenas um para teste unitario",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "todos os itens da lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "limitar itens parametro": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "merge teste unitario",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "merge todos os itens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "associação cliente x investimento": {
+      "main": [
+        [
+          {
+            "node": "limitar itens parametro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an Email": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "todos os itens da lista": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "merge todos os itens",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge teste unitario": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "apenas um para teste unitario": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "merge teste unitario",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "merge todos os itens": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "7735682c-56ee-4834-b04b-d69e9364a1bb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "39cc4d9418ee80b2bd4b3fc47a61612e145c6ced710f59160a331214c83c7bd0"
+  },
+  "id": "LI7zLrdBb93QAlhv",
+  "tags": []
+}
